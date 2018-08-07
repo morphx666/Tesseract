@@ -104,7 +104,7 @@ namespace Tesseract {
             return mR;
         }
 
-        // Aguilera-Perez Algorithm
+        // Aguilera-Pérez Algorithm
         // http://wscg.zcu.cz/wscg2004/Papers_2004_Short/N29.pdf
         public Matrix Rotate(double angle, int n) {
             if(n <= 2) {

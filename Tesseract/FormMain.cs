@@ -17,6 +17,8 @@ namespace Tesseract {
         private PointF[] pts;
         private double[] zs;
 
+        private double zoom = 1.0;
+
         public FormMain() {
             InitializeComponent();
 
@@ -50,6 +52,8 @@ namespace Tesseract {
                 }
             }) { IsBackground = true };
             renderer.Start();
+
+            this.MouseWheel += (object s1, MouseEventArgs e1) => { zoom += 0.1 * (e1.Delta > 0 ? 1 : (zoom > 0.1 ? -1 : 0)); };
         }
 
         private void Form_Paint(object sender, PaintEventArgs e) {
@@ -83,11 +87,11 @@ namespace Tesseract {
                     double d = 1.0 / (2.5 - p.Data[p.Rows - di - 1][0]);
                     p *= (Matrix.Identity(p.Rows, p.Rows) * d);
                 }
-                p *= 1000;
+                p *= 1000 * zoom;
 
                 pts[i] = new PointF((float)p.Data[0][0], (float)p.Data[1][0]);
                 zs[i] = p.Rows > 2 ? p.Data[2][0] : 0;
-                g.FillEllipse(Brushes.White, pts[i].X - 1, pts[i].Y - 1, 3, 3);
+                //g.FillEllipse(Brushes.White, pts[i].X - 1, pts[i].Y - 1, 3, 3);
             }
 
             if(renderWithAlpha && dimensions > 2) {
