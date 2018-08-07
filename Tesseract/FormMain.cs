@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Tesseract {
@@ -19,6 +14,9 @@ namespace Tesseract {
         private List<Tuple<int, int>> linesIndexes = new List<Tuple<int, int>>();
         private bool renderWithAlpha = true;
 
+        private PointF[] pts;
+        private double[] zs;
+        private bool is4D;
 
         public FormMain() {
             InitializeComponent();
@@ -29,39 +27,7 @@ namespace Tesseract {
         }
 
         private void FormMain_Load(object sender, EventArgs e) {
-            //vertices = new Matrix[] {
-            //    new Matrix(new double[] { -1, -1, -1}), // Back face
-            //    new Matrix(new double[] { -1,  1, -1}),
-            //    new Matrix(new double[] {  1,  1, -1}),
-            //    new Matrix(new double[] {  1, -1, -1}),
-
-            //    new Matrix(new double[] { -1, -1,  1}), // Front face
-            //    new Matrix(new double[] { -1,  1,  1}),
-            //    new Matrix(new double[] {  1,  1,  1}),
-            //    new Matrix(new double[] {  1, -1,  1}),
-            //};
-
-            vertices = new Matrix[] {
-                new Matrix(new double[] { -1, -1, -1,  1}), // Back face
-                new Matrix(new double[] { -1,  1, -1,  1}),
-                new Matrix(new double[] {  1,  1, -1,  1}),
-                new Matrix(new double[] {  1, -1, -1,  1}),
-
-                new Matrix(new double[] { -1, -1,  1,  1}), // Front face
-                new Matrix(new double[] { -1,  1,  1,  1}),
-                new Matrix(new double[] {  1,  1,  1,  1}),
-                new Matrix(new double[] {  1, -1,  1,  1}),
-
-                new Matrix(new double[] { -1, -1, -1, -1}), // 4th dimension, face #1
-                new Matrix(new double[] { -1,  1, -1, -1}),
-                new Matrix(new double[] {  1,  1, -1, -1}),
-                new Matrix(new double[] {  1, -1, -1, -1}),
-
-                new Matrix(new double[] { -1, -1,  1, -1}), // 4th dimension, face #2
-                new Matrix(new double[] { -1,  1,  1, -1}),
-                new Matrix(new double[] {  1,  1,  1, -1}),
-                new Matrix(new double[] {  1, -1,  1, -1})
-            };
+            vertices = Shapes.Hypercube();
 
             //Matrix m = new Matrix(
             //        new double[][] {
@@ -80,6 +46,9 @@ namespace Tesseract {
                 }
             }
 
+            pts = new PointF[vertices.Length];
+            zs = new double[vertices.Length];
+            is4D = vertices[0].Rows == 4;
             rotationM = Matrix.Identity(vertices[0].Rows, vertices[0].Rows);
 
             Thread renderer = new Thread(() => {
@@ -94,40 +63,37 @@ namespace Tesseract {
         private void Form_Paint(object sender, PaintEventArgs e) {
             Graphics g = e.Graphics;
             Matrix p;
-            PointF[] pts = new PointF[vertices.Length];
-            double[] zs = new double[vertices.Length];
-            int pi = -1;
-            bool is4D = vertices[0].Rows == 4;
 
             g.Clear(Color.Black);
             g.TranslateTransform(this.DisplayRectangle.Width / 2, this.DisplayRectangle.Height / 2);
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-            foreach(Matrix v in vertices) {
+            for(int i = 0; i < vertices.Length; i++) {
                 if(is4D) {
-                    p = v * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
-                          * rotationM.Rotate(1.0 * angle * ToRad, 3); // Rotate W axis
+                    p = vertices[i] * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
+                                    * rotationM.Rotate(1.0 * angle * ToRad, 3); // Rotate W axis
                 } else {
-                    p = v * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
-                          * rotationM.Rotate(1.0 * angle * ToRad, 1); // Rotate Y axis
+                    p = vertices[i] * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
+                                    * rotationM.Rotate(1.0 * angle * ToRad, 1); // Rotate Y axis
                     p *= 0.7;
                 }
 
                 // Project down from v.Rows dimensions to 2 dimensions
-                for(int di = 0; di < v.Rows - 2; di++) {
-                    double d = 1.0 / (2.5 - p.Data[v.Rows - di - 1][0]);
+                for(int di = 0; di < p.Rows - 2; di++) {
+                    double d = 1.0 / (2.5 - p.Data[p.Rows - di - 1][0]);
                     p *= (Matrix.Identity(p.Rows, p.Rows) * d);
                 }
                 p *= 1000;
 
-                pts[++pi] = new PointF((float)p.Data[0][0], (float)p.Data[1][0]);
-                zs[pi] = p.Data[2][0];
-                g.FillEllipse(Brushes.White, pts[pi].X - 1, pts[pi].Y - 1, 3, 3);
+                pts[i] = new PointF((float)p.Data[0][0], (float)p.Data[1][0]);
+                zs[i] = p.Data[2][0];
+                g.FillEllipse(Brushes.White, pts[i].X - 1, pts[i].Y - 1, 3, 3);
             }
 
             if(renderWithAlpha) {
                 double minZ = zs.Min();
                 double maxZ = zs.Max();
-                linesIndexes.ForEach((t) => DrawLine(g, pts[t.Item1], pts[t.Item2], zs[t.Item1], zs[t.Item2], minZ, maxZ, 5));
+                linesIndexes.ForEach((t) => DrawLine(g, pts[t.Item1], pts[t.Item2], zs[t.Item1], zs[t.Item2], minZ, maxZ, 4));
             } else {
                 linesIndexes.ForEach((t) => g.DrawLine(Pens.White, pts[t.Item1], pts[t.Item2]));
             }
@@ -153,7 +119,7 @@ namespace Tesseract {
                 j = k / r;
                 j = (1 - j) * z1 + j * z2;
                 a = Map(j, minZ, maxZ, 45.0, 255.0);
-                j = Map(j, minZ, maxZ, 0.5, 3.0);
+                j = Map(j, minZ, maxZ, 1.0, 4.0);
 
                 using(Pen zp = new Pen(Color.FromArgb((int)a, Color.White), (float)j)) {
                     g.DrawLine(zp, p1, p2);
