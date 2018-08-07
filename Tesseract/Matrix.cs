@@ -61,6 +61,13 @@ namespace Tesseract {
             Matrix mM = new Matrix(Rows, Columns);
             double d = Determinant();
 
+            if(Rows==2) {
+                return new Matrix(
+                    new double[][] { new double[] {  Data[1][1], -Data[0][1] },
+                                     new double[] { -Data[1][0],  Data[0][0] }
+                    });
+            }
+
             for(int m = 0; m < Rows; m++) { // Transposed Matrix of Minors and Cofactors
                 for(int n = 0; n < Columns; n++) {
                     mM.Data[n][m] = Minor(m, n).Determinant();

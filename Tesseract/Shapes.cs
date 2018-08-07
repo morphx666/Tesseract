@@ -1,5 +1,14 @@
 ﻿namespace Tesseract {
     public class Shapes {
+        public static Matrix[] Square() {
+            return new Matrix[] {
+                new Matrix(new double[] { -1, -1}),
+                new Matrix(new double[] { -1,  1}),
+                new Matrix(new double[] {  1,  1}),
+                new Matrix(new double[] {  1, -1}),
+            };
+        }
+
         public static Matrix[] Cube() {
             return new Matrix[] {
                 new Matrix(new double[] { -1, -1, -1}), // Back face

@@ -16,7 +16,6 @@ namespace Tesseract {
 
         private PointF[] pts;
         private double[] zs;
-        private bool is4D;
 
         public FormMain() {
             InitializeComponent();
@@ -27,15 +26,9 @@ namespace Tesseract {
         }
 
         private void FormMain_Load(object sender, EventArgs e) {
+            //vertices = Shapes.Square();
+            //vertices = Shapes.Cube();
             vertices = Shapes.Hypercube();
-
-            //Matrix m = new Matrix(
-            //        new double[][] {
-            //            new double[] { 3, 0, 2},
-            //            new double[] { 2, 0, -2},
-            //            new double[] { 0, 1, 1}
-            //        }
-            //    );
 
             // This will only work for squares, cubes, hypercubes, etc...
             for(int i = 0; i < vertices.Length; i++) {
@@ -48,7 +41,6 @@ namespace Tesseract {
 
             pts = new PointF[vertices.Length];
             zs = new double[vertices.Length];
-            is4D = vertices[0].Rows == 4;
             rotationM = Matrix.Identity(vertices[0].Rows, vertices[0].Rows);
 
             Thread renderer = new Thread(() => {
@@ -62,20 +54,28 @@ namespace Tesseract {
 
         private void Form_Paint(object sender, PaintEventArgs e) {
             Graphics g = e.Graphics;
-            Matrix p;
+            Matrix p = null;
+            int dimensions = vertices[0].Rows;
 
             g.Clear(Color.Black);
             g.TranslateTransform(this.DisplayRectangle.Width / 2, this.DisplayRectangle.Height / 2);
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
             for(int i = 0; i < vertices.Length; i++) {
-                if(is4D) {
-                    p = vertices[i] * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
-                                    * rotationM.Rotate(1.0 * angle * ToRad, 3); // Rotate W axis
-                } else {
-                    p = vertices[i] * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
-                                    * rotationM.Rotate(1.0 * angle * ToRad, 1); // Rotate Y axis
-                    p *= 0.7;
+                switch(dimensions) {
+                    case 4:
+                        p = vertices[i] * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
+                                        * rotationM.Rotate(1.0 * angle * ToRad, 3); // Rotate W axis
+                        break;
+                    case 3:
+                        p = vertices[i] * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
+                                        * rotationM.Rotate(1.0 * angle * ToRad, 1); // Rotate Y axis
+                        p *= 0.6;
+                        break;
+                    case 2:
+                        p = vertices[i] * rotationM.Rotate(0.6 * angle * ToRad, 1);  // Rotate XY plane
+                        p *= 0.2;
+                        break;
                 }
 
                 // Project down from v.Rows dimensions to 2 dimensions
@@ -86,14 +86,14 @@ namespace Tesseract {
                 p *= 1000;
 
                 pts[i] = new PointF((float)p.Data[0][0], (float)p.Data[1][0]);
-                zs[i] = p.Data[2][0];
+                zs[i] = p.Rows > 2 ? p.Data[2][0] : 0;
                 g.FillEllipse(Brushes.White, pts[i].X - 1, pts[i].Y - 1, 3, 3);
             }
 
-            if(renderWithAlpha) {
+            if(renderWithAlpha && dimensions > 2) {
                 double minZ = zs.Min();
                 double maxZ = zs.Max();
-                linesIndexes.ForEach((t) => DrawLine(g, pts[t.Item1], pts[t.Item2], zs[t.Item1], zs[t.Item2], minZ, maxZ, 4));
+                linesIndexes.ForEach((t) => DrawLineAlpha(g, pts[t.Item1], pts[t.Item2], zs[t.Item1], zs[t.Item2], minZ, maxZ, 4));
             } else {
                 linesIndexes.ForEach((t) => g.DrawLine(Pens.White, pts[t.Item1], pts[t.Item2]));
             }
@@ -101,7 +101,7 @@ namespace Tesseract {
             angle += 1.0;
         }
 
-        private void DrawLine(Graphics g, PointF p1, PointF p2, double z1, double z2, double minZ, double maxZ, double s = 1.0) {
+        private void DrawLineAlpha(Graphics g, PointF p1, PointF p2, double z1, double z2, double minZ, double maxZ, double s = 1.0) {
             double dx = p2.X - p1.X;
             double dy = p2.Y - p1.Y;
             double a = Math.Atan2(dy, dx);
@@ -132,7 +132,7 @@ namespace Tesseract {
             return min + (v - rmin) / (rmax - rmin) * (max - min);
         }
 
-        private double Distance(Matrix v1, Matrix v2) {
+        private double Distance(Matrix v1, Matrix v2) { //  Assuming m x 1 (m dimensions vectors)
             double d = 0;
             for(int i = 0; i < v1.Rows; i++) {
                 d += Math.Pow(v2.Data[i][0] - v1.Data[i][0], 2);
