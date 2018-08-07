@@ -15,6 +15,8 @@ namespace Tesseract {
         Matrix[] vertices;
         private Matrix rotationM;
         double angle = 0;
+        const double ToRad = Math.PI / 180.0;
+        List<Tuple<int, int>> linesIndexes = new List<Tuple<int, int>>();
 
         public FormMain() {
             InitializeComponent();
@@ -67,6 +69,14 @@ namespace Tesseract {
             //        }
             //    );
 
+            for(int i = 0; i < vertices.Length; i++) {
+                for(int j = i + 1; j < vertices.Length; j++) {
+                    if(Distance(vertices[i], vertices[j]) == 2) {
+                        linesIndexes.Add(new Tuple<int, int>(i, j));
+                    }
+                }
+            }
+
             rotationM = Matrix.Identity(vertices[0].Rows, vertices[0].Rows);
 
             Thread renderer = new Thread(() => {
@@ -88,8 +98,8 @@ namespace Tesseract {
             g.TranslateTransform(this.DisplayRectangle.Width / 2, this.DisplayRectangle.Height / 2);
 
             foreach(Matrix v in vertices) {
-                p = v * rotationM.Rotate(0.6 * angle * Math.PI / 180, 0) *
-                        rotationM.Rotate(angle * Math.PI / 180, 3);
+                p = v * rotationM.Rotate(0.6 * angle * ToRad, 0)  // Rotate X axis
+                      * rotationM.Rotate(1.0 * angle * ToRad, 3); // Rotate W axis
 
                 // Project down from v.Rows dimensions to 2 dimensions
                 for(int di = 0; di < v.Rows - 2; di++) {
@@ -102,18 +112,9 @@ namespace Tesseract {
                 g.FillEllipse(Brushes.White, pts[pi].X - 4, pts[pi].Y - 4, 8, 8);
             }
 
-            for(int i = 0; i < vertices.Length; i++) {
-                for(int j = 0; j < vertices.Length; j++) {
-                    if(i != j) {
-                        if(Distance(vertices[i], vertices[j]) == 2) {
-                            g.DrawLine(Pens.White, pts[i], pts[j]);
-                        }
-                    }
-                }
-            }
+            linesIndexes.ForEach((t) => g.DrawLine(Pens.White, pts[t.Item1], pts[t.Item2]));
 
             angle += 1.0;
-            //angle %= 360;
         }
 
         private double Distance(Matrix v1, Matrix v2) {
