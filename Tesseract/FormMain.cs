@@ -153,8 +153,9 @@ namespace Tesseract {
                 j = k / r;
                 j = (1 - j) * z1 + j * z2;
                 a = Map(j, minZ, maxZ, 45.0, 255.0);
+                j = Map(j, minZ, maxZ, 0.5, 3.0);
 
-                using(Pen zp = new Pen(Color.FromArgb((int)a, Color.White), 1.8f)) {
+                using(Pen zp = new Pen(Color.FromArgb((int)a, Color.White), (float)j)) {
                     g.DrawLine(zp, p1, p2);
                 };
                 p1 = p2;
