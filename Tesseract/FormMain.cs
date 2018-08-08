@@ -12,11 +12,15 @@ namespace Tesseract {
         private double angle = 0;
         private const double ToRad = Math.PI / 180.0;
         private List<Tuple<int, int>> linesIndexes = new List<Tuple<int, int>>();
+
         private bool renderWithAlpha = true;
+        private bool renderVertices = true;
+        private int vertexSize = 4;
 
         private PointF[] pts;
         private double[] zs;
 
+        private Color c = Color.White;
         private double zoom = 1.0;
 
         public FormMain() {
@@ -97,38 +101,50 @@ namespace Tesseract {
             if(renderWithAlpha && dimensions > 2) {
                 double minZ = zs.Min();
                 double maxZ = zs.Max();
-                linesIndexes.ForEach((t) => DrawLineAlpha(g, pts[t.Item1], pts[t.Item2], zs[t.Item1], zs[t.Item2], minZ, maxZ, 4));
+                linesIndexes.ForEach((t) => DrawLineAlpha(g, c, pts[t.Item1], pts[t.Item2], zs[t.Item1], zs[t.Item2], minZ, maxZ, 4));
             } else {
-                linesIndexes.ForEach((t) => g.DrawLine(Pens.White, pts[t.Item1], pts[t.Item2]));
+                using(Pen pc = new Pen(c)) {
+                    linesIndexes.ForEach((t) => {
+                        g.DrawLine(pc, pts[t.Item1], pts[t.Item2]);
+                        g.FillEllipse(Brushes.White, pts[t.Item1].X - vertexSize / 2, pts[t.Item1].Y - vertexSize / 2, vertexSize, vertexSize);
+                    });
+                }
             }
 
             angle += 1.0;
         }
 
-        private void DrawLineAlpha(Graphics g, PointF p1, PointF p2, double z1, double z2, double minZ, double maxZ, double s = 1.0) {
+        private void DrawLineAlpha(Graphics g, Color c, PointF p1, PointF p2, double z1, double z2, double minZ, double maxZ, double s = 1.0) {
             double dx = p2.X - p1.X;
             double dy = p2.Y - p1.Y;
             double a = Math.Atan2(dy, dx);
             double ca = Math.Cos(a);
             double sa = Math.Sin(a);
-            double r = Math.Sqrt(dx * dx + dy * dy);
+            double r = Math.Sqrt(dx * dx + dy * dy); // Radius
             double x = p1.X;
             double y = p1.Y;
-            double j;
+            double li;
+            double t;
 
-            for(double k = s; k < r; k += s) {
-                p2.X = (float)(x + k * ca);
-                p2.Y = (float)(y + k * sa);
+            for(double rs = s; rs < r; rs += s) {
+                p2.X = (float)(x + rs * ca);
+                p2.Y = (float)(y + rs * sa);
 
-                j = k / r;
-                j = (1 - j) * z1 + j * z2;
-                a = Map(j, minZ, maxZ, 45.0, 255.0);
-                j = Map(j, minZ, maxZ, 1.0, 4.0);
+                li = rs / r;
+                li = (1 - li) * z1 + li * z2;           // Linear interpolation between z1 and z2 across r
+                a = Map(li, minZ, maxZ, 45.0, 255.0);   // Alpha
+                t = Map(li, minZ, maxZ, 1.0, 4.0);      // Pen thickness
 
-                using(Pen zp = new Pen(Color.FromArgb((int)a, Color.White), (float)j)) {
+                using(Pen zp = new Pen(Color.FromArgb((int)a, c), (float)t)) {
                     g.DrawLine(zp, p1, p2);
                 };
                 p1 = p2;
+            }
+
+            if(renderVertices) {
+                using(SolidBrush zb = new SolidBrush(Color.FromArgb((int)Map(z1, minZ, maxZ, 45.0, 255.0), c))) {
+                    g.FillEllipse(zb, p1.X - vertexSize / 2, p1.Y - vertexSize / 2, vertexSize, vertexSize);
+                }
             }
         }
 
