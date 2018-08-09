@@ -27,8 +27,8 @@ namespace Tesseract {
             }
         }
 
-        public double Determinant() {
-            if(Rows == 2 && Columns == 2) return Data[0][0] * Data[1][1] - Data[0][1] * Data[1][0];
+        public double Determinant() { // Assuming Square matrix
+            if(Columns == 2) return Data[0][0] * Data[1][1] - Data[0][1] * Data[1][0];
 
             double d = 0;
             for(int n = 0; n < Columns; n++) {
@@ -37,24 +37,6 @@ namespace Tesseract {
             }
 
             return d;
-        }
-
-        public Matrix Minor(int row, int column) {
-            Matrix mM = new Matrix(Rows - 1, Columns - 1);
-            int m2 = 0;
-            for(int m1 = 0; m1 < Rows; m1++) {
-                if(m1 != row) {
-                    int n2 = 0;
-                    for(int n1 = 0; n1 < Columns; n1++) {
-                        if(n1 != column) {
-                            mM.Data[m2][n2] = Data[m1][n1];
-                            n2++;
-                        }
-                    }
-                    m2++;
-                }
-            }
-            return mM;
         }
 
         public Matrix Inverse() {
@@ -80,28 +62,6 @@ namespace Tesseract {
             }
 
             return mM / d;
-        }
-
-        private Matrix R(int row, int col, double angle) {
-            Matrix mR = new Matrix(Rows, Columns);
-
-            for(int m = 0; m < mR.Rows; m++) {
-                for(int n = 0; n < mR.Columns; n++) {
-                    if(m == row && n == row) {
-                        mR.Data[m][n] = Math.Cos(angle);
-                    } else if(m == col && n == col) {
-                        mR.Data[m][n] = Math.Cos(angle);
-                    } else if(m == row && n == col) {
-                        mR.Data[m][n] = -Math.Sin(angle);
-                    } else if(m == col && n == row) {
-                        mR.Data[m][n] = Math.Sin(angle);
-                    } else if(m == n && m != row && n != col) {
-                        mR.Data[m][n] = 1;
-                    }
-                }
-            }
-
-            return mR;
         }
 
         // Aguilera-Pérez Algorithm
@@ -135,6 +95,46 @@ namespace Tesseract {
                 }
             }
             return mM[0] * R(n - 1, n, angle) * mM[0].Inverse();
+        }
+
+        private Matrix R(int row, int col, double angle) {
+            Matrix mR = new Matrix(Rows, Columns);
+
+            for(int m = 0; m < mR.Rows; m++) {
+                for(int n = 0; n < mR.Columns; n++) {
+                    if(m == row && n == row) {
+                        mR.Data[m][n] = Math.Cos(angle);
+                    } else if(m == col && n == col) {
+                        mR.Data[m][n] = Math.Cos(angle);
+                    } else if(m == row && n == col) {
+                        mR.Data[m][n] = -Math.Sin(angle);
+                    } else if(m == col && n == row) {
+                        mR.Data[m][n] = Math.Sin(angle);
+                    } else if(m == n && m != row && n != col) {
+                        mR.Data[m][n] = 1;
+                    }
+                }
+            }
+
+            return mR;
+        }
+
+        private Matrix Minor(int row, int column) {
+            Matrix mM = new Matrix(Rows - 1, Columns - 1);
+            int m2 = 0;
+            for(int m1 = 0; m1 < Rows; m1++) {
+                if(m1 != row) {
+                    int n2 = 0;
+                    for(int n1 = 0; n1 < Columns; n1++) {
+                        if(n1 != column) {
+                            mM.Data[m2][n2] = Data[m1][n1];
+                            n2++;
+                        }
+                    }
+                    m2++;
+                }
+            }
+            return mM;
         }
 
         public static Matrix Identity(int rows, int columns) {

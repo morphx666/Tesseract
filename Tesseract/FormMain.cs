@@ -14,7 +14,7 @@ namespace Tesseract {
         private List<Tuple<int, int>> linesIndexes = new List<Tuple<int, int>>();
 
         private bool renderWithAlpha = true;
-        private bool renderVertices = true;
+        private bool renderVertices = false;
         private int vertexSize = 4;
 
         private PointF[] pts;
@@ -106,7 +106,8 @@ namespace Tesseract {
                 using(Pen pc = new Pen(c)) {
                     linesIndexes.ForEach((t) => {
                         g.DrawLine(pc, pts[t.Item1], pts[t.Item2]);
-                        g.FillEllipse(Brushes.White, pts[t.Item1].X - vertexSize / 2, pts[t.Item1].Y - vertexSize / 2, vertexSize, vertexSize);
+                        // FIXME: The last vertex is not rendered
+                        if(renderVertices) g.FillEllipse(Brushes.White, pts[t.Item1].X - vertexSize / 2, pts[t.Item1].Y - vertexSize / 2, vertexSize, vertexSize);
                     });
                 }
             }
@@ -131,9 +132,9 @@ namespace Tesseract {
                 p2.Y = (float)(y + rs * sa);
 
                 li = rs / r;
-                li = (1 - li) * z1 + li * z2;           // Linear interpolation between z1 and z2 across r
-                a = Map(li, minZ, maxZ, 45.0, 255.0);   // Alpha
-                t = Map(li, minZ, maxZ, 1.0, 4.0);      // Pen thickness
+                li = (1 - li) * z1 + li * z2;               // Linear interpolation between z1 and z2 across r
+                a = Map(li, minZ, maxZ, 40.0, 255.0);       // Alpha
+                t = Map(li, minZ, maxZ, 1.0, vertexSize);   // Pen thickness
 
                 using(Pen zp = new Pen(Color.FromArgb((int)a, c), (float)t)) {
                     g.DrawLine(zp, p1, p2);
@@ -142,6 +143,7 @@ namespace Tesseract {
             }
 
             if(renderVertices) {
+                // FIXME: It appears that some vertices are being rendered more than once
                 using(SolidBrush zb = new SolidBrush(Color.FromArgb((int)Map(z1, minZ, maxZ, 45.0, 255.0), c))) {
                     g.FillEllipse(zb, p1.X - vertexSize / 2, p1.Y - vertexSize / 2, vertexSize, vertexSize);
                 }
