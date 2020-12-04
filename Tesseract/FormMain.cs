@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Tesseract {
@@ -11,7 +12,7 @@ namespace Tesseract {
         private Matrix rotationM;
         private double angle = 0;
         private const double ToRad = Math.PI / 180.0;
-        private List<Tuple<int, int>> linesIndexes = new List<Tuple<int, int>>();
+        private readonly List<Tuple<int, int>> linesIndexes = new List<Tuple<int, int>>();
 
         private bool renderWithAlpha = true;
         private bool renderVertices = false;
@@ -37,27 +38,25 @@ namespace Tesseract {
             vertices = Shapes.Hypercube();
 
             // This will only work for squares, cubes, hypercubes, etc...
-            for(int i = 0; i < vertices.Length; i++) {
-                for(int j = i + 1; j < vertices.Length; j++) {
-                    if(Distance(vertices[i], vertices[j]) == 2) {
+            for(int i = 0; i < vertices.Length; i++)
+                for(int j = i + 1; j < vertices.Length; j++)
+                    if(Distance(vertices[i], vertices[j]) == 2)
                         linesIndexes.Add(new Tuple<int, int>(i, j));
-                    }
-                }
-            }
 
             pts = new PointF[vertices.Length];
             zs = new double[vertices.Length];
             rotationM = Matrix.Identity(vertices[0].Rows, vertices[0].Rows);
 
-            Thread renderer = new Thread(() => {
+            Task.Run(() => {
                 while(true) {
                     Thread.Sleep(30);
                     this.Invalidate();
                 }
-            }) { IsBackground = true };
-            renderer.Start();
+            });
 
-            this.MouseWheel += (object s1, MouseEventArgs e1) => { zoom += 0.1 * (e1.Delta > 0 ? 1 : (zoom > 0.1 ? -1 : 0)); };
+            this.MouseWheel += (object s1, MouseEventArgs e1) => { 
+                zoom += 0.1 * (e1.Delta > 0 ? 1 : (zoom > 0.1 ? -1 : 0));
+            };
         }
 
         private void Form_Paint(object sender, PaintEventArgs e) {
@@ -154,11 +153,10 @@ namespace Tesseract {
             return min + (v - rmin) / (rmax - rmin) * (max - min);
         }
 
-        private double Distance(Matrix v1, Matrix v2) { //  Assuming m x 1 (m dimensions vectors)
+        private double Distance(Matrix v1, Matrix v2) { // Assuming m x 1 (m dimensions vectors)
             double d = 0;
-            for(int i = 0; i < v1.Rows; i++) {
+            for(int i = 0; i < v1.Rows; i++)
                 d += Math.Pow(v2.Data[i][0] - v1.Data[i][0], 2);
-            }
 
             return Math.Sqrt(d);
         }

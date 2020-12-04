@@ -1,5 +1,5 @@
 ﻿namespace Tesseract {
-    public class Shapes {
+    public static class Shapes {
         public static Matrix[] Square() {
             return new Matrix[] {
                 new Matrix(new double[] { -1, -1}),
