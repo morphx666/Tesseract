@@ -8,7 +8,9 @@ using System.Windows.Forms;
 
 namespace Tesseract {
     public partial class FormMain : Form {
+        private (string Name, Matrix[] Vertices)[] shapes;
         private Matrix[] vertices;
+        private int shapesIndex = 0;
         private Matrix rotationM;
         private double angle = 0;
         private const double ToRad = Math.PI / 180.0;
@@ -30,12 +32,59 @@ namespace Tesseract {
             this.SetStyle(ControlStyles.AllPaintingInWmPaint, true);
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
             this.SetStyle(ControlStyles.UserPaint, true);
+
+            shapes = new (string, Matrix[])[] {
+                ("Square", Shapes.Square()),
+                ("Cube", Shapes.Cube()),
+                ("Hypercube", Shapes.Hypercube())
+            };
+
+            SetupShape();
+
+            Task.Run(() => {
+                while(true) {
+                    Thread.Sleep(30);
+                    this.Invalidate();
+                }
+            });
+
+            this.KeyDown += (object s, KeyEventArgs e1) => {
+                switch(e1.KeyCode) {
+                    case Keys.Left:
+                        shapesIndex--;
+                        if(shapesIndex < 0) shapesIndex = shapes.Length - 1;
+                        lock(linesIndexes) SetupShape();
+                        break;
+                    case Keys.Right:
+                        shapesIndex++;
+                        if(shapesIndex == shapes.Length) shapesIndex = 0;
+                        lock(linesIndexes) SetupShape();
+                        break;
+                    case Keys.Escape:
+                        Application.Exit();
+                        break;
+                }
+            };
+
+            this.MouseWheel += (object s1, MouseEventArgs e1) => {
+                zoom += 0.1 * (e1.Delta > 0 ? 1 : (zoom > 0.1 ? -1 : 0));
+            };
+
+            this.Paint += (object s, PaintEventArgs e1) => {
+                Graphics g = e1.Graphics;
+
+                int h = this.Font.Height;
+                g.DrawString($"Current Shape:     {shapes[shapesIndex].Name}", this.Font, Brushes.Gainsboro, 5, 5 + h * 0);
+                g.DrawString( "Left/Right Arrow:  Change Shape", this.Font, Brushes.Gainsboro, 5, 5 + h * 1);
+                g.DrawString( "Escape:            Exit", this.Font, Brushes.Gainsboro, 5, 5 + h * 2);
+
+                lock(linesIndexes) RenderShape(g);
+            };
         }
 
-        private void FormMain_Load(object sender, EventArgs e) {
-            //vertices = Shapes.Square();
-            //vertices = Shapes.Cube();
-            vertices = Shapes.Hypercube();
+        private void SetupShape() {
+            linesIndexes.Clear();
+            vertices = shapes[shapesIndex].Vertices;
 
             // This will only work for squares, cubes, hypercubes, etc...
             for(int i = 0; i < vertices.Length; i++)
@@ -46,25 +95,12 @@ namespace Tesseract {
             pts = new PointF[vertices.Length];
             zs = new double[vertices.Length];
             rotationM = Matrix.Identity(vertices[0].Rows, vertices[0].Rows);
-
-            Task.Run(() => {
-                while(true) {
-                    Thread.Sleep(30);
-                    this.Invalidate();
-                }
-            });
-
-            this.MouseWheel += (object s1, MouseEventArgs e1) => { 
-                zoom += 0.1 * (e1.Delta > 0 ? 1 : (zoom > 0.1 ? -1 : 0));
-            };
         }
 
-        private void Form_Paint(object sender, PaintEventArgs e) {
-            Graphics g = e.Graphics;
+        private void RenderShape(Graphics g) {
             Matrix p = null;
             int dimensions = vertices[0].Rows;
 
-            g.Clear(Color.Black);
             g.TranslateTransform(this.DisplayRectangle.Width / 2, this.DisplayRectangle.Height / 2);
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
